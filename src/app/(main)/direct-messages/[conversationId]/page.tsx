@@ -16,25 +16,24 @@ const DirectMessageIdPage = async ({
         return redirectToSignIn();
     }
 
-    const profile = await db.user.findUnique({
-        where: { userId }
-    });
+    let profile = null;
+    let conversation = null;
 
-    if (!profile) {
-        return redirect("/");
-    }
+    try {
+        profile = await db.user.findUnique({ where: { userId } });
 
-    const conversation = await db.conversation.findUnique({
-        where: { id: conversationId },
-        include: {
-            memberOne: true,
-            memberTwo: true,
+        if (profile) {
+            conversation = await db.conversation.findUnique({
+                where: { id: conversationId },
+                include: { memberOne: true, memberTwo: true }
+            });
         }
-    });
-
-    if (!conversation) {
-        return redirect("/direct-messages");
+    } catch (error) {
+        console.error("[DM_ID_PAGE] Database error:", error);
     }
+
+    if (!profile) return redirect("/sign-in");
+    if (!conversation) return redirect("/direct-messages");
 
     const currentMember = conversation.memberOne.id === profile.id
         ? conversation.memberOne
@@ -47,13 +46,13 @@ const DirectMessageIdPage = async ({
     return (
         <ChatConversation
             conversationId={conversation.id}
-            serverId={"direct-message"} // No longer tied to a real server
+            serverId={"direct-message"}
             otherMemberName={otherMember.name}
             otherMemberProfileId={otherMember.id}
             otherMemberUserId={otherMember.userId}
             otherMemberImageUrl={otherMember.imageUrl}
             currentMemberId={currentMember.id}
-            currentMemberRole={"GUEST"} // Global friends don't have server roles
+            currentMemberRole={"GUEST"}
             currentMemberName={currentMember.name}
             currentMemberProfileId={currentMember.id}
             currentMemberUserId={profile.userId}

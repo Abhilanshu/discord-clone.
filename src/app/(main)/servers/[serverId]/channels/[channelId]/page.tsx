@@ -16,39 +16,33 @@ const ChannelIdPage = async ({
         return redirect("/sign-in");
     }
 
-    const profile = await db.user.findUnique({
-        where: { userId }
-    });
+    let profile = null;
+    let channel = null;
+    let member = null;
 
-    if (!profile) {
-        return redirect("/");
+    try {
+        profile = await db.user.findUnique({ where: { userId } });
+
+        if (profile) {
+            channel = await db.channel.findUnique({ where: { id: channelId } });
+
+            if (channel) {
+                member = await db.member.findFirst({
+                    where: { serverId, profileId: profile.id },
+                    include: { profile: true },
+                });
+            }
+        }
+    } catch (error) {
+        console.error("[CHANNEL_PAGE] Database error:", error);
     }
 
-    const channel = await db.channel.findUnique({
-        where: { id: channelId }
-    });
-
-    if (!channel) {
-        return redirect(`/servers/${serverId}`);
-    }
-
-    const member = await db.member.findFirst({
-        where: {
-            serverId,
-            profileId: profile.id,
-        },
-        include: {
-            profile: true,
-        },
-    });
-
-    if (!member) {
-        return redirect("/");
-    }
+    if (!profile) return redirect("/sign-in");
+    if (!channel) return redirect(`/servers/${serverId}`);
+    if (!member) return redirect("/");
 
     return (
         <div className="flex flex-col h-full bg-[#313338]">
-            {/* Channel Header */}
             <div className="h-12 flex items-center px-4 border-b border-zinc-800 shadow-sm">
                 {channel.type === "TEXT" ? (
                     <svg className="w-5 h-5 text-zinc-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -67,7 +61,6 @@ const ChannelIdPage = async ({
                 )}
             </div>
 
-            {/* Content Area - Text Chat or Voice/Video */}
             {channel.type === "TEXT" ? (
                 <ChatArea
                     channelId={channelId}
@@ -86,7 +79,6 @@ const ChannelIdPage = async ({
                     paramValue={channel.id}
                 />
             ) : (
-                /* Voice/Video Channel - LiveKit MediaRoom */
                 <MediaRoom
                     chatId={channel.id}
                     video={channel.type === "VIDEO"}

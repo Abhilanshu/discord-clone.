@@ -14,31 +14,30 @@ const ServerIdPage = async ({
         return redirect("/sign-in");
     }
 
-    const profile = await db.user.findUnique({
-        where: { userId }
-    });
+    let profile = null;
+    let server = null;
 
-    if (!profile) {
-        return redirect("/");
+    try {
+        profile = await db.user.findUnique({ where: { userId } });
+
+        if (profile) {
+            server = await db.server.findUnique({
+                where: {
+                    id: serverId,
+                    members: { some: { profileId: profile.id } }
+                },
+                include: {
+                    channels: { orderBy: { createdAt: "asc" }, take: 1 }
+                }
+            });
+        }
+    } catch (error) {
+        console.error("[SERVER_PAGE] Database error:", error);
     }
 
-    const server = await db.server.findUnique({
-        where: {
-            id: serverId,
-            members: {
-                some: { profileId: profile.id }
-            }
-        },
-        include: {
-            channels: {
-                orderBy: { createdAt: "asc" },
-                take: 1
-            }
-        }
-    });
+    if (!profile) return redirect("/sign-in");
 
     const generalChannel = server?.channels[0];
-
     if (generalChannel) {
         return redirect(`/servers/${serverId}/channels/${generalChannel.id}`);
     }
