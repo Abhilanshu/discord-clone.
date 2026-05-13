@@ -8,35 +8,40 @@ export const initialProfile = async () => {
         return null;
     }
 
-    const profile = await db.user.findUnique({
-        where: {
-            userId
+    try {
+        const profile = await db.user.findUnique({
+            where: {
+                userId
+            }
+        });
+
+        if (profile) {
+            return profile;
         }
-    });
 
-    if (profile) {
-        return profile;
-    }
+        // Only fetch full user data when we need to create a new profile
+        const user = await currentUser();
 
-    // Only fetch full user data when we need to create a new profile
-    const user = await currentUser();
+        if (!user) {
+            return null;
+        }
 
-    if (!user) {
+        const newProfile = await db.user.upsert({
+            where: {
+                userId: user.id
+            },
+            update: {},
+            create: {
+                userId: user.id,
+                name: `${user.firstName} ${user.lastName}`,
+                imageUrl: user.imageUrl,
+                email: user.emailAddresses[0].emailAddress
+            }
+        });
+
+        return newProfile;
+    } catch (error) {
+        console.error("[INITIAL_PROFILE] Database error:", error);
         return null;
     }
-
-    const newProfile = await db.user.upsert({
-        where: {
-            userId: user.id
-        },
-        update: {},
-        create: {
-            userId: user.id,
-            name: `${user.firstName} ${user.lastName}`,
-            imageUrl: user.imageUrl,
-            email: user.emailAddresses[0].emailAddress
-        }
-    });
-
-    return newProfile;
 };
