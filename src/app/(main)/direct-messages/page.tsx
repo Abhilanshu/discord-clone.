@@ -10,42 +10,50 @@ export default async function DirectMessagesPage() {
         return redirect("/sign-in");
     }
 
-    const profile = await db.user.findUnique({
-        where: { userId }
-    });
+    let profile = null;
+    let friendsList: any[] = [];
 
-    if (!profile) {
-        return redirect("/");
+    try {
+        profile = await db.user.findUnique({
+            where: { userId }
+        });
+
+        if (profile) {
+            const friendships = await db.friendship.findMany({
+                where: {
+                    OR: [
+                        { profileOneId: profile.id },
+                        { profileTwoId: profile.id }
+                    ]
+                },
+                include: {
+                    profileOne: true,
+                    profileTwo: true
+                }
+            });
+
+            friendsList = friendships.map((f) => {
+                const otherProfile = f.profileOneId === profile!.id ? f.profileTwo : f.profileOne;
+                const isIncoming = f.profileTwoId === profile!.id && f.status === "PENDING";
+
+                return {
+                    id: f.id,
+                    profileId: otherProfile.id,
+                    userId: otherProfile.userId,
+                    name: otherProfile.name,
+                    imageUrl: otherProfile.imageUrl,
+                    status: f.status === "ACCEPTED" ? "Offline" : "Pending",
+                    isIncoming
+                };
+            }) as any[];
+        }
+    } catch (error) {
+        console.error("[DIRECT_MESSAGES_PAGE] Database error:", error);
     }
 
-    // Fetch actual friendships
-    const friendships = await db.friendship.findMany({
-        where: {
-            OR: [
-                { profileOneId: profile.id },
-                { profileTwoId: profile.id }
-            ]
-        },
-        include: {
-            profileOne: true,
-            profileTwo: true
-        }
-    });
-
-    const friendsList = friendships.map((f) => {
-        const otherProfile = f.profileOneId === profile.id ? f.profileTwo : f.profileOne;
-        const isIncoming = f.profileTwoId === profile.id && f.status === "PENDING";
-
-        return {
-            id: f.id,
-            profileId: otherProfile.id,
-            userId: otherProfile.userId,
-            name: otherProfile.name,
-            imageUrl: otherProfile.imageUrl,
-            status: f.status === "ACCEPTED" ? "Offline" : "Pending", // Defaulting to Offline for now
-            isIncoming
-        };
-    }) as any[];
+    if (!profile) {
+        return redirect("/sign-in");
+    }
 
     return (
         <FriendsDashboard

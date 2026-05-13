@@ -12,23 +12,32 @@ export const NavigationSidebar = async () => {
         return redirect("/sign-in");
     }
 
-    const profile = await db.user.findUnique({
-        where: { userId }
-    });
+    let profile = null;
+    let servers: any[] = [];
 
-    if (!profile) {
-        return redirect("/");
+    try {
+        profile = await db.user.findUnique({
+            where: { userId }
+        });
+
+        if (profile) {
+            servers = await db.server.findMany({
+                where: {
+                    members: {
+                        some: {
+                            profileId: profile.id
+                        }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error("[NAVIGATION_SIDEBAR] Database error:", error);
     }
 
-    const servers = await db.server.findMany({
-        where: {
-            members: {
-                some: {
-                    profileId: profile.id
-                }
-            }
-        }
-    });
+    if (!profile) {
+        return redirect("/sign-in");
+    }
 
     return (
         <div className="space-y-4 flex flex-col items-center h-full text-primary w-full bg-[#1E1F22] py-3">
