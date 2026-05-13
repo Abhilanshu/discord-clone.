@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import Link from "next/link";
-import { Search } from "lucide-react";
 import { UserArea } from "@/components/navigation/user-area";
 
 export const DirectMessagesSidebar = async () => {
@@ -12,37 +11,43 @@ export const DirectMessagesSidebar = async () => {
         return redirect("/sign-in");
     }
 
-    const profile = await db.user.findUnique({
-        where: { userId }
-    });
+    let profile = null;
+    let uniqueConversations: any[] = [];
 
-    if (!profile) {
-        return redirect("/");
+    try {
+        profile = await db.user.findUnique({
+            where: { userId }
+        });
+
+        if (profile) {
+            const conversations = await db.conversation.findMany({
+                where: {
+                    OR: [
+                        { memberOneId: profile.id },
+                        { memberTwoId: profile.id }
+                    ]
+                },
+                include: {
+                    memberOne: true,
+                    memberTwo: true
+                }
+            });
+
+            uniqueConversations = conversations.filter((convo, index, self) => {
+                const otherProfileId = convo.memberOneId === profile!.id ? convo.memberTwo.id : convo.memberOne.id;
+                return index === self.findIndex((c) => {
+                    const otherId = c.memberOneId === profile!.id ? c.memberTwo.id : c.memberOne.id;
+                    return otherId === otherProfileId;
+                });
+            });
+        }
+    } catch (error) {
+        console.error("[DM_SIDEBAR] Database error:", error);
     }
 
-    // Find all conversations where this user is either memberOne or memberTwo
-    const conversations = await db.conversation.findMany({
-        where: {
-            OR: [
-                { memberOneId: profile.id },
-                { memberTwoId: profile.id }
-            ]
-        },
-        include: {
-            memberOne: true,
-            memberTwo: true
-        }
-    });
-
-    // Deduplicate conversations: If two users share multiple servers, they have multiple Conversation records.
-    // We only want to display ONE global DM context per unique Profile ID.
-    const uniqueConversations = conversations.filter((convo, index, self) => {
-        const otherProfileId = convo.memberOneId === profile.id ? convo.memberTwo.id : convo.memberOne.id;
-        return index === self.findIndex((c) => {
-            const otherId = c.memberOneId === profile.id ? c.memberTwo.id : c.memberOne.id;
-            return otherId === otherProfileId;
-        });
-    });
+    if (!profile) {
+        return redirect("/sign-in");
+    }
 
     return (
         <div className="flex flex-col h-full text-primary w-full bg-[#2B2D31]">
@@ -82,7 +87,7 @@ export const DirectMessagesSidebar = async () => {
                     </div>
 
                     {uniqueConversations.map((convo) => {
-                        const otherMember = convo.memberOneId === profile.id ? convo.memberTwo : convo.memberOne;
+                        const otherMember = convo.memberOneId === profile!.id ? convo.memberTwo : convo.memberOne;
 
                         return (
                             <Link key={convo.id} href={`/direct-messages/${convo.id}`} className="flex items-center w-[calc(100%-8px)] px-2 py-1.5 group rounded-md hover:bg-zinc-700/50 transition cursor-pointer">

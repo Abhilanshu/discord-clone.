@@ -17,40 +17,48 @@ const ServerIdLayout = async ({
         return redirect("/sign-in");
     }
 
-    const profile = await db.user.findUnique({
-        where: { userId }
-    });
+    let profile = null;
+    let server = null;
+
+    try {
+        profile = await db.user.findUnique({
+            where: { userId }
+        });
+
+        if (profile) {
+            server = await db.server.findUnique({
+                where: {
+                    id: serverId,
+                    members: {
+                        some: {
+                            profileId: profile.id
+                        }
+                    }
+                },
+                include: {
+                    channels: {
+                        orderBy: { createdAt: "asc" }
+                    },
+                    members: {
+                        include: { profile: true },
+                        orderBy: { role: "asc" }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error("[SERVER_LAYOUT] Database error:", error);
+    }
 
     if (!profile) {
         return redirect("/sign-in");
     }
 
-    const server = await db.server.findUnique({
-        where: {
-            id: serverId,
-            members: {
-                some: {
-                    profileId: profile.id
-                }
-            }
-        },
-        include: {
-            channels: {
-                orderBy: { createdAt: "asc" }
-            },
-            members: {
-                include: { profile: true },
-                orderBy: { role: "asc" }
-            }
-        }
-    });
-
     if (!server) {
         return redirect("/");
     }
 
-    // Find current user's role
-    const currentMember = server.members.find(m => m.profile.userId === userId);
+    const currentMember = server.members.find((m: any) => m.profile.userId === userId);
     const profileRole = currentMember?.role || "GUEST";
 
     return (
@@ -63,12 +71,12 @@ const ServerIdLayout = async ({
                         name: server.name,
                         imageUrl: server.imageUrl,
                         inviteCode: server.inviteCode,
-                        channels: server.channels.map(ch => ({
+                        channels: server.channels.map((ch: any) => ({
                             id: ch.id,
                             name: ch.name,
                             type: ch.type,
                         })),
-                        members: server.members.map(m => ({
+                        members: server.members.map((m: any) => ({
                             id: m.id,
                             role: m.role,
                             profile: {
@@ -92,4 +100,3 @@ const ServerIdLayout = async ({
 };
 
 export default ServerIdLayout;
-
