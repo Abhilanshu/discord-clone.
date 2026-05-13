@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: discord-clone
+    env: node
+    plan: free # Change to starter or higher if you need more power
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NEXT_PUBLIC_SITE_URL
+        value: https://discord-clone.onrender.com # UPDATE THIS AFTER DEPLOYMENT
+      - key: DATABASE_URL
+        sync: false # Set this in Render Dashboard
+      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        sync: false # Set this in Render Dashboard
+      - key: CLERK_SECRET_KEY
+        sync: false # Set this in Render Dashboard
+      - key: NEXT_PUBLIC_CLERK_SIGN_IN_URL
+        value: /sign-in
+      - key: NEXT_PUBLIC_CLERK_SIGN_UP_URL
+        value: /sign-up
+      - key: NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL
+        value: /
+      - key: LIVEKIT_API_KEY
+        sync: false # Set this in Render Dashboard
+      - key: LIVEKIT_API_SECRET
+        sync: false # Set this in Render Dashboard
+      - key: NEXT_PUBLIC_LIVEKIT_URL
+        sync: false # Set this in Render Dashboard
+      - key: UPLOADTHING_TOKEN
+        sync: false # Set this in Render Dashboard

@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { InviteClient } from "./invite-client";
 
 const FriendInvitePage = async ({
     params,
@@ -22,44 +23,22 @@ const FriendInvitePage = async ({
         where: { userId }
     });
 
-    if (!currentUser) {
-        return redirect("/");
-    }
+    if (!currentUser) return redirect("/");
+    if (currentUser.id === profileId) return redirect("/");
 
-    if (currentUser.id === profileId) {
-        return redirect("/");
-    }
-
-    // Check if friendship exists
-    const existingFriendship = await db.friendship.findFirst({
-        where: {
-            OR: [
-                { profileOneId: currentUser.id, profileTwoId: profileId },
-                { profileOneId: profileId, profileTwoId: currentUser.id }
-            ]
-        }
+    const inviter = await db.user.findUnique({
+        where: { id: profileId }
     });
 
-    if (existingFriendship) {
-        if (existingFriendship.status === "PENDING" && existingFriendship.profileTwoId === currentUser.id) {
-            // They invited me, I'm clicking their link -> Accept
-            await db.friendship.update({
-                where: { id: existingFriendship.id },
-                data: { status: "ACCEPTED" }
-            });
-        }
-        return redirect("/");
-    }
+    if (!inviter) return redirect("/");
 
-    await db.friendship.create({
-        data: {
-            profileOneId: currentUser.id,
-            profileTwoId: profileId,
-            status: "PENDING"
-        }
-    });
-
-    return redirect("/");
+    return (
+        <InviteClient 
+            profileId={inviter.id}
+            name={inviter.name}
+            imageUrl={inviter.imageUrl}
+        />
+    );
 };
 
 export default FriendInvitePage;
