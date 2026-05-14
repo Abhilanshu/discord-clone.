@@ -97,6 +97,7 @@ export const MediaRoom = ({ chatId, video, audio, profile }: MediaRoomProps) => 
     const [token, setToken] = useState("");
     const [error, setError] = useState("");
     const [userConfirmed, setUserConfirmed] = useState(false);
+    const [showAddPeople, setShowAddPeople] = useState(false);
     const { socket } = useSocket();
     const router = useRouter();
 
@@ -235,8 +236,6 @@ export const MediaRoom = ({ chatId, video, audio, profile }: MediaRoomProps) => 
             </div>
         );
     }
-
-    const [showAddPeople, setShowAddPeople] = useState(false);
 
     return (
         <div className="flex-1 relative" style={{ height: "100%" }}>
