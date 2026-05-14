@@ -62,10 +62,10 @@ const MobileMicToggle = () => {
         <button
             onClick={toggleMic}
             className={`
-                fixed bottom-4 left-1/2 -translate-x-1/2 z-50
+                fixed bottom-24 left-1/2 -translate-x-1/2 z-50
                 md:hidden
-                flex items-center gap-2 px-6 py-4 rounded-full
-                font-bold text-lg shadow-2xl
+                flex items-center gap-2 px-6 py-3 rounded-full
+                font-bold text-base shadow-2xl
                 transition-all transform active:scale-95
                 ${micEnabled
                     ? "bg-emerald-500 text-white shadow-emerald-500/30"
